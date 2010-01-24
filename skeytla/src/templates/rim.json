@@ -1,0 +1,1 @@
+{% for rim in rimord %}{{escape(rim.ordmynd)+"\n"}}{% end %}

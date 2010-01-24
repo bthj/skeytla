@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block head %}
+
+  <script type="text/javascript">
+  
+    $("#skeytla").autocomplete('/rim', {
+      skeytla: true
+    });
+  
+  </script>
+
+{% end %}
+
+{% block body %}
+  <form autocomplete="off">
+    <textarea rows="3" cols="40" id="skeytla"></textarea>
+  </form>
+{% end %}
