@@ -3,17 +3,33 @@
 {% block head %}
 
   <script type="text/javascript">
-  
+  $().ready(function() {
+	  
     $("#skeytla").autocomplete('/rim', {
-      skeytla: true
+      skeytla: true,
+      multipleSeparator: / |\n/,
+      max: 100
     });
-  
+    
+  });
   </script>
 
 {% end %}
 
 {% block body %}
-  <form autocomplete="off">
-    <textarea rows="3" cols="40" id="skeytla"></textarea>
-  </form>
+  <div style="float: left;">
+    <form autocomplete="off">
+      <p>
+        <textarea rows="10" cols="40" id="skeytla"></textarea>
+      </p>
+    </form>
+  </div>
+  <div style="float: right;">
+    <p>Finndu @forskeyti eða viðskeyti@ með því að rita</p>
+    <ul>
+      <li>@upphaf</li>
+      <li>endi@</li>
+      <li>eða bæði með @upphafi@endi
+    </ul>
+  </div>
 {% end %}

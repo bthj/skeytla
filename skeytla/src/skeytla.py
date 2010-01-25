@@ -47,19 +47,21 @@ class RimHandler(BaseHandler):
     def get(self):
         upphaf = self.get_argument("u", None)
         endir = self.get_argument("e", None)
+        limit = self.get_argument("limit", None)
+        if limit is None:
+            limit = self.max_result_rows
         if upphaf is None and endir is not None:
-            rimord = self.db.query(''.join(["select * from ordmyndir ",
-                                   "where ordmynd like %s limit ", 
-                                   str(self.max_result_rows)]), ('%%%s' % endir))
+            rimord = self.db.query("select * from ordmyndir "
+                                   "where ordmynd like %s limit %s", 
+                                   ('%%%s' % endir), int(limit))
         elif upphaf is not None and endir is not None:
-            rimord = self.db.query(''.join(["select * from ordmyndir ",
-                                   "where ordmynd like %s and ordmynd like %s limit ",
-                                   str(self.max_result_rows)]), 
-                                   ('%s%%' % upphaf), ('%%%s' % endir))
+            rimord = self.db.query("select * from ordmyndir "
+                                   "where ordmynd like %s and ordmynd like %s limit %s",
+                                   ('%s%%' % upphaf), ('%%%s' % endir), int(limit))
         elif upphaf is not None and endir is None:
-            rimord = self.db.query(''.join(["select * from ordmyndir ",
-                                   "where ordmynd like %s limit ",
-                                   str(self.max_result_rows)]), ('%s%%' % upphaf))            
+            rimord = self.db.query("select * from ordmyndir "
+                                   "where ordmynd like %s limit %s",
+                                    ('%s%%' % upphaf), int(limit))
         self.render("rim.json", rimord=rimord)
 
 

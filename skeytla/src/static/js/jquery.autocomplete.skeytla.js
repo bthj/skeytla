@@ -8,9 +8,17 @@
  *   http://www.gnu.org/licenses/gpl.html
  *
  * Revision: $Id: jquery.autocomplete.js 15 2009-08-22 10:30:27Z joern.zaefferer $
+ * 
+ * Modifications to the original version 1.1 from http://bassistance.de/jquery-plugins/jquery-plugin-autocomplete/
+ * by Björn Þór Jónsson - bangsi@bthj.is
  */
 
 ;(function($) {
+
+jQuery.fn.log = function (msg) {
+    console.log("%s: %o", msg, this);
+    return this;
+};
 	
 $.fn.extend({
 	autocomplete: function(urlOrData, options) {
@@ -78,6 +86,7 @@ $.Autocompleter = function(input, options) {
 	var select = $.Autocompleter.Select(options, input, selectCurrent, config);
 	
 	var blockSubmit;
+
 	
 	// prevent form submit in opera when selecting with return key
 	$.browser.opera && $(input.form).bind("submit.autocomplete", function() {
@@ -85,6 +94,11 @@ $.Autocompleter = function(input, options) {
 			blockSubmit = false;
 			return false;
 		}
+	});
+	
+	$input.keyup( function(){
+		clearTimeout(timeout);
+		timeout = setTimeout(onChange, options.delay);
 	});
 	
 	// only opera doesn't trigger keydown multiple times while pressed, others don't work with keypress at all
@@ -97,8 +111,8 @@ $.Autocompleter = function(input, options) {
 		switch(event.keyCode) {
 		
 			case KEY.UP:
-				event.preventDefault();
 				if ( select.visible() ) {
+					event.preventDefault();
 					select.prev();
 				} else {
 					onChange(0, true);
@@ -106,8 +120,8 @@ $.Autocompleter = function(input, options) {
 				break;
 				
 			case KEY.DOWN:
-				event.preventDefault();
 				if ( select.visible() ) {
+					event.preventDefault();
 					select.next();
 				} else {
 					onChange(0, true);
@@ -147,11 +161,6 @@ $.Autocompleter = function(input, options) {
 			case KEY.ESC:
 				select.hide();
 				break;
-				
-			default:
-				clearTimeout(timeout);
-				timeout = setTimeout(onChange, options.delay);
-				break;
 		}
 	}).focus(function(){
 		// track whether the field has focus, we shouldn't process any
@@ -184,7 +193,7 @@ $.Autocompleter = function(input, options) {
 			else $input.trigger("result", result && [result.data, result.value]);
 		}
 		$.each(trimWords($input.val()), function(i, value) {
-			request(value, findValueCallback, findValueCallback);
+			request(value, findValueCallback, findValueCallback); // TODO bthj: when is this called?  ever?
 		});
 	}).bind("flushCache", function() {
 		cache.flush();
@@ -208,7 +217,18 @@ $.Autocompleter = function(input, options) {
 		var v = selected.result;
 		previousValue = v;
 		
-		if ( options.multiple ) {
+		if( options.skeytla ) {
+			var currentText = $input.val();
+			if( skeytlaMatchAtCursor ) {
+				var beforeMatch = currentText.substring( 0, skeytlaMatchAtCursor.startIndex );
+				var afterMatchn = currentText.substring( skeytlaMatchAtCursor.endIndex );
+				var caretPosition = beforeMatch.length + v.length;  // set cursor at the end of newly inserted word
+				v = beforeMatch + v + afterMatchn;
+				skeytlaMatchAtCursor = null;
+			} else { // TODO test: should not happen?
+				v = currentText;
+			}
+		} else if ( options.multiple ) {
 			var words = trimWords($input.val());
 			if ( words.length > 1 ) {
 				var seperator = options.multipleSeparator.length;
@@ -231,12 +251,16 @@ $.Autocompleter = function(input, options) {
 		}
 		
 		$input.val(v);
+		if( caretPosition ) {
+			$(input).caret(caretPosition, caretPosition);   //jCaret plugin: http://cloudgen.w0ng.hk/jquery/caret.php
+		}
 		hideResultsNow();
 		$input.trigger("result", [selected.data, selected.value]);
 		return true;
 	}
 	
 	function onChange(crap, skipPrevCheck) {
+
 		if( lastKeyPressCode == KEY.DEL ) {
 			select.hide();
 			return;
@@ -249,22 +273,111 @@ $.Autocompleter = function(input, options) {
 		
 		previousValue = currentValue;
 		
-		currentValue = lastWord(currentValue);
-		if ( currentValue.length >= options.minChars) {
-			$input.addClass(options.loadingClass);
-			if (!options.matchCase)
-				currentValue = currentValue.toLowerCase();
-			request(currentValue, receiveData, hideResultsNow);
+		if( options.skeytla ) {
+			var doSearch = false;
+			var searchValues = getSkeytlaSearchValues( currentValue );
+			if( searchValues !== null ) {
+				if( searchValues.beginSearchWord !== null 
+						/* && searchValues.beginSearchWord >= options.minChars */ ) {
+					doSearch = true;
+					if( !options.matchCase ) searchValues.beginSearchWord = searchValues.beginSearchWord.toLowerCase();
+				}
+				if( searchValues.endSearchWord !== null 
+						/* && searchValues.endSearchWord >= options.minChars */ ) {
+					doSearch = true;
+					if( !options.matchCase ) searchValues.endSearchWord = searchValues.endSearchWord.toLowerCase();
+				}
+			}
+			if( doSearch ) {
+				$input.addClass(options.loadingClass);
+				request(searchValues, receiveData, hideResultsNow);
+			} else {
+				stopLoading();
+				select.hide();
+			}			
 		} else {
-			stopLoading();
-			select.hide();
+			currentValue = lastWord(currentValue);
+			if ( currentValue.length >= options.minChars) {
+				$input.addClass(options.loadingClass);
+				if (!options.matchCase)
+					currentValue = currentValue.toLowerCase();
+				request(currentValue, receiveData, hideResultsNow);
+			} else {
+				stopLoading();
+				select.hide();
+			}	
 		}
 	};
+	
+	var reSkeytlaMatch = /^@.*$|^.*@$/;
+	var reSkeytlaMatchBeginning = /^@[^@]*$/;
+	var reSkeytlaMatchEnding = /^[^@]*@$/;
+	var skeytlaMatchAtCursor = null;
+	function getSkeytlaSearchValues( text ) {
+		var searchValues = null;
+		var words = trimWords(text);
+		$.each( words, function() {
+			if( isSkeytlaMatchWord(this) ) {
+				skeytlaMatchAtCursor = getSkeytlaMatchAtCursor( text, this );
+				if( skeytlaMatchAtCursor !== null ) {
+					searchValues = getSkeytlaSearchValuesFromMatch( this, skeytlaMatchAtCursor );	
+				}
+			}
+		});
+		return searchValues;
+	}
+	
+	function isSkeytlaMatchWord( value ) {
+		var isSkeytla = false;
+		if( value.length > 1 ) {
+			isSkeytla = value.match( reSkeytlaMatch ) ? true : false; // like @sssd@qfadf@ or @sssdqfadf@
+		}
+		return isSkeytla;
+	}
+	
+	function getSkeytlaMatchAtCursor( text, word ) {
+		var skeytlaMatch = null;		
+		var cursorAt = $(input).selection().start;
+		var startIndex = -1;
+		do {
+			startIndex = text.indexOf( word, startIndex + 1 );
+			var endIndex = startIndex + word.length;
+			if( startIndex < cursorAt && cursorAt <= endIndex ) {
+				skeytlaMatch = { startIndex: startIndex, endIndex: endIndex };
+			}
+		} while( skeytlaMatch === null && startIndex > -1 );
+		return skeytlaMatch;
+	}
+	
+	function getSkeytlaSearchValuesFromMatch( word, boundaries ) {
+		var beginSearchWord = "";
+		var endSearchWord = "";
+		if( word.match( reSkeytlaMatchBeginning ) ) { // like @asdflkj
+			beginSearchWord = word.substring( 1, word.length );
+		} else if( word.match( reSkeytlaMatchEnding ) ) { // like sssdfadf@
+			endSearchWord = word.substring( 0, word.length - 1 );
+			// it may be useful to move the cursor to the start of match and it may just be an annoyance:
+			// $(input).caret( boundaries.startIndex, boundaries.startIndex );
+		} else { // @sssd@qfadf@ - or @sssdqfadf@ in which case it's treated as a beginSearch
+			$.each( word.split("@"), function() {
+				if( this.length > 0 ) {
+					if( !beginSearchWord ) {
+						beginSearchWord = this;
+					} else {
+						endSearchWord = this;
+					}
+				}
+			});
+		}
+		return { 
+			beginSearchWord: beginSearchWord, endSearchWord: endSearchWord };
+	}
+	
 	
 	function trimWords(value) {
 		if (!value)
 			return [""];
-		if (!options.multiple)
+		if (!options.multiple && !options.skeytla)
 			return [$.trim(value)];
 		return $.map(value.split(options.multipleSeparator), function(word) {
 			return $.trim(value).length ? $.trim(word) : null;
@@ -279,7 +392,7 @@ $.Autocompleter = function(input, options) {
 			return words[0];
 		var cursorAt = $(input).selection().start;
 		if (cursorAt == value.length) {
-			words = trimWords(value)
+			words = trimWords(value);
 		} else {
 			words = trimWords(value.replace(value.substring(cursorAt), ""));
 		}
@@ -342,9 +455,12 @@ $.Autocompleter = function(input, options) {
 	};
 
 	function request(term, success, failure) {
-		if (!options.matchCase)
-			term = term.toLowerCase();
-		var data = cache.load(term);
+		if( options.skeytla ) {
+			var termKey = term.beginSearchWord + ";" + term.endSearchWord;
+		} else {
+			var termKey = term;
+		}
+		var data = cache.load( termKey );
 		// recieve the cached data
 		if (data && data.length) {
 			success(term, data);
@@ -358,6 +474,12 @@ $.Autocompleter = function(input, options) {
 				extraParams[key] = typeof param == "function" ? param() : param;
 			});
 			
+			if( options.skeytla ) {
+				var searchParams = { u: term.beginSearchWord, e: term.endSearchWord };
+			} else {
+				var searchParams = { q: lastWord(term) };
+			}
+			
 			$.ajax({
 				// try to leverage ajaxQueue plugin to abort previous requests
 				mode: "abort",
@@ -366,12 +488,11 @@ $.Autocompleter = function(input, options) {
 				dataType: options.dataType,
 				url: options.url,
 				data: $.extend({
-					q: lastWord(term),
 					limit: options.max
-				}, extraParams),
+				}, searchParams, extraParams),
 				success: function(data) {
 					var parsed = options.parse && options.parse(data) || parse(data);
-					cache.add(term, parsed);
+					cache.add(termKey, parsed);
 					success(term, parsed);
 				}
 			});
@@ -415,7 +536,7 @@ $.Autocompleter.defaults = {
 	matchSubset: true,
 	matchContains: false,
 	cacheLength: 10,
-	max: 100,
+	max: 10,
 	mustMatch: false,
 	extraParams: {},
 	selectFirst: true,
@@ -425,8 +546,27 @@ $.Autocompleter.defaults = {
 	width: 0,
 	multiple: false,
 	multipleSeparator: ", ",
+	skeytla: false,
 	highlight: function(value, term) {
-		return value.replace(new RegExp("(?![^&;]+;)(?!<[^<>]*)(" + term.replace(/([\^\$\(\)\[\]\{\}\*\.\+\?\|\\])/gi, "\\$1") + ")(?![^<>]*>)(?![^&;]+;)", "gi"), "<strong>$1</strong>");
+		if( this.skeytla ) {
+			if( term.beginSearchWord ) {
+				value = value.replace(
+						new RegExp("(?![^&;]+;)(?!<[^<>]*)(" 
+								+ term.beginSearchWord.replace(/([\^\$\(\)\[\]\{\}\*\.\+\?\|\\])/gi, "\\$1") 
+								+ ")(?![^<>]*>)(?![^&;]+;)", "gi"), 
+						"<strong>$1</strong>");
+			}
+			if( term.endSearchWord ) {
+				value = value.replace(
+						new RegExp("(?![^&;]+;)(?!<[^<>]*)(" 
+								+ term.endSearchWord.replace(/([\^\$\(\)\[\]\{\}\*\.\+\?\|\\])/gi, "\\$1") 
+								+ ")(?![^<>]*>)(?![^&;]+;)", "gi"), 
+						"<strong>$1</strong>");				
+			}
+			return value;
+		} else {
+			return value.replace(new RegExp("(?![^&;]+;)(?!<[^<>]*)(" + term.replace(/([\^\$\(\)\[\]\{\}\*\.\+\?\|\\])/gi, "\\$1") + ")(?![^<>]*>)(?![^&;]+;)", "gi"), "<strong>$1</strong>");
+		}
 	},
     scroll: true,
     scrollHeight: 180
