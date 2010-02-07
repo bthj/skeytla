@@ -2,6 +2,12 @@
 
 {% block head %}
 
+  <style type="text/css" media="screen">
+    #bubble {
+      position: absolute;
+      display: none;
+    }
+  </style>
   <script type="text/javascript">
   $().ready(function() {
 	  
@@ -32,4 +38,30 @@
       <li>eða bæði með @upphafi@endi
     </ul>
   </div>
+  
+  <table id="bubble" class="popup">
+        <tbody><tr>
+                <td id="topleft" class="corner-left"></td>
+                <td class="top"></td>
+                <td id="topright" class="corner-right"></td>
+        </tr>
+
+        <tr>
+                <td class="left"><img width="17" height="30" alt="popup tail" src="{{ static_url("img/stem_bubble_tail.png") }}"/></td>
+                <td class="contents">
+                  <div id="popup-contents">
+                  </div>
+                </td>
+                <td class="right"></td>    
+        </tr>
+
+        <tr>
+                <td class="corner-left" id="bottomleft"></td>
+                <td class="bottom"></td>
+                <td id="bottomright" class="corner-right"></td>
+        </tr>
+     </tbody>
+   </table>
+  
+  
 {% end %}

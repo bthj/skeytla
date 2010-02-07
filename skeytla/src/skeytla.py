@@ -20,7 +20,8 @@ class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
             (r"/", HomeHandler),
-            (r"/rim", RimHandler)
+            (r"/rim", RimHandler),
+            (r"/stem", StemHandler)
         ]
         settings = dict(
             title=u"Skeytla",
@@ -64,6 +65,13 @@ class RimHandler(BaseHandler):
                                     ('%s%%' % upphaf), int(limit))
         self.render("rim.json", rimord=rimord)
 
+class StemHandler(BaseHandler):
+    def get(self):
+        beygingarmynd = self.get_argument("b", None)
+        if beygingarmynd is not None:
+            ordstofnar = self.db.query("select distinct id, uppflettiord, ordflokkur "
+                                       "from bin where beygingarmynd = %s", beygingarmynd)
+        self.render("stem.json", stems=ordstofnar)
 
 def main():
     tornado.options.parse_command_line()

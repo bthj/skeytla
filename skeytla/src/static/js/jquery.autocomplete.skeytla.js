@@ -14,11 +14,6 @@
  */
 
 ;(function($) {
-
-jQuery.fn.log = function (msg) {
-    console.log("%s: %o", msg, this);
-    return this;
-};
 	
 $.fn.extend({
 	autocomplete: function(urlOrData, options) {
@@ -221,9 +216,9 @@ $.Autocompleter = function(input, options) {
 			var currentText = $input.val();
 			if( skeytlaMatchAtCursor ) {
 				var beforeMatch = currentText.substring( 0, skeytlaMatchAtCursor.startIndex );
-				var afterMatchn = currentText.substring( skeytlaMatchAtCursor.endIndex );
+				var afterMatch = currentText.substring( skeytlaMatchAtCursor.endIndex );
 				var caretPosition = beforeMatch.length + v.length;  // set cursor at the end of newly inserted word
-				v = beforeMatch + v + afterMatchn;
+				v = beforeMatch + v + afterMatch;
 				skeytlaMatchAtCursor = null;
 			} else { // TODO test: should not happen?
 				v = currentText;
@@ -330,7 +325,7 @@ $.Autocompleter = function(input, options) {
 	function isSkeytlaMatchWord( value ) {
 		var isSkeytla = false;
 		if( value.length > 1 ) {
-			isSkeytla = value.match( reSkeytlaMatch ) ? true : false; // like @sssd@qfadf@ or @sssdqfadf@
+			isSkeytla = value.match( reSkeytlaMatch ) ? true : false; // like @qwer, poiuy@, @sssd@qfadf@ or @sssdqfadf@
 		}
 		return isSkeytla;
 	}
@@ -342,7 +337,7 @@ $.Autocompleter = function(input, options) {
 		do {
 			startIndex = text.indexOf( word, startIndex + 1 );
 			var endIndex = startIndex + word.length;
-			if( startIndex < cursorAt && cursorAt <= endIndex ) {
+			if( startIndex > -1 && startIndex < cursorAt && cursorAt <= endIndex ) {
 				skeytlaMatch = { startIndex: startIndex, endIndex: endIndex };
 			}
 		} while( skeytlaMatch === null && startIndex > -1 );
@@ -369,8 +364,7 @@ $.Autocompleter = function(input, options) {
 				}
 			});
 		}
-		return { 
-			beginSearchWord: beginSearchWord, endSearchWord: endSearchWord };
+		return { beginSearchWord: beginSearchWord, endSearchWord: endSearchWord };
 	}
 	
 	
@@ -547,11 +541,16 @@ $.Autocompleter.defaults = {
 	multiple: false,
 	multipleSeparator: ", ",
 	skeytla: false,
+	skeytlaBubbleId: "#bubble",
+	skeytlaBubbleContentsId: "#popup-contents",
+	skeytlaStemUrl: "/stem",
+	skeytlaBinIdUrlPrefix: "http://bin.arnastofnun.is/leit.php?id=",
+	skeytlaAjaxSpinnerPath: "/static/img/ajax-loader.gif",
 	highlight: function(value, term) {
 		if( this.skeytla ) {
 			if( term.beginSearchWord ) {
 				value = value.replace(
-						new RegExp("(?![^&;]+;)(?!<[^<>]*)(" 
+						new RegExp("^(?![^&;]+;)(?!<[^<>]*)(" 
 								+ term.beginSearchWord.replace(/([\^\$\(\)\[\]\{\}\*\.\+\?\|\\])/gi, "\\$1") 
 								+ ")(?![^<>]*>)(?![^&;]+;)", "gi"), 
 						"<strong>$1</strong>");
@@ -560,7 +559,7 @@ $.Autocompleter.defaults = {
 				value = value.replace(
 						new RegExp("(?![^&;]+;)(?!<[^<>]*)(" 
 								+ term.endSearchWord.replace(/([\^\$\(\)\[\]\{\}\*\.\+\?\|\\])/gi, "\\$1") 
-								+ ")(?![^<>]*>)(?![^&;]+;)", "gi"), 
+								+ ")(?![^<>]*>)(?![^&;]+;)$", "gi"), 
 						"<strong>$1</strong>");				
 			}
 			return value;
@@ -724,6 +723,10 @@ $.Autocompleter.Select = function (options, input, select, config) {
 		element,
 		list;
 	
+	if( options.skeytla ) {
+		var stemBubble = $.Autocompleter.StemInfoBubble( options, this );
+	}
+	
 	// Create results
 	function init() {
 		if (!needsInit)
@@ -737,7 +740,10 @@ $.Autocompleter.Select = function (options, input, select, config) {
 		list = $("<ul/>").appendTo(element).mouseover( function(event) {
 			if(target(event).nodeName && target(event).nodeName.toUpperCase() == 'LI') {
 	            active = $("li", list).removeClass(CLASSES.ACTIVE).index(target(event));
-			    $(target(event)).addClass(CLASSES.ACTIVE);            
+			    $(target(event)).addClass(CLASSES.ACTIVE);
+			    if( options.skeytla && isVisible() ) {
+			    	stemBubble.showStems( getCurrent() );
+	            }
 	        }
 		}).click(function(event) {
 			$(target(event)).addClass(CLASSES.ACTIVE);
@@ -782,6 +788,9 @@ $.Autocompleter.Select = function (options, input, select, config) {
                 list.scrollTop(offset);
             }
         }
+        if( options.skeytla && isVisible() ) {
+        	stemBubble.showStems( getCurrent() );
+        }
 	};
 	
 	function movePosition(step) {
@@ -821,6 +830,14 @@ $.Autocompleter.Select = function (options, input, select, config) {
 			list.bgiframe();
 	}
 	
+	function getCurrent() {
+		return isVisible() && (listItems.filter("." + CLASSES.ACTIVE)[0] || options.selectFirst && listItems[0]);
+	}
+	
+	function isVisible() {
+		return element && element.is(":visible");		
+	}
+	
 	return {
 		display: function(d, q) {
 			init();
@@ -852,12 +869,15 @@ $.Autocompleter.Select = function (options, input, select, config) {
 			element && element.hide();
 			listItems && listItems.removeClass(CLASSES.ACTIVE);
 			active = -1;
+			if( options.skeytla ) {
+				stemBubble.hideStems();
+			}
 		},
 		visible : function() {
-			return element && element.is(":visible");
+			return isVisible();
 		},
 		current: function() {
-			return this.visible() && (listItems.filter("." + CLASSES.ACTIVE)[0] || options.selectFirst && listItems[0]);
+			return getCurrent();
 		},
 		show: function() {
 			var offset = $(input).offset();
@@ -887,6 +907,9 @@ $.Autocompleter.Select = function (options, input, select, config) {
                 }
                 
             }
+            if( options.skeytla ) {
+            	stemBubble.showStems( getCurrent() );
+            }
 		},
 		selected: function() {
 			var selected = listItems && listItems.filter("." + CLASSES.ACTIVE).removeClass(CLASSES.ACTIVE);
@@ -899,6 +922,108 @@ $.Autocompleter.Select = function (options, input, select, config) {
 			element && element.remove();
 		}
 	};
+};
+
+$.Autocompleter.StemInfoBubble = function( options, mySelect ) {
+	
+	var stemTimeout;
+	var stemCache = $.Autocompleter.Cache( $.extend(options, {matchSubset: false}) );
+	var currrentConjElem;
+	var visible = false;
+	var bubble = $( options.skeytlaBubbleId );
+	var bubbleContents = $( options.skeytlaBubbleContentsId );
+	var ajaxSpinner = $("<img/>").attr("src", options.skeytlaAjaxSpinnerPath);
+	
+	function showStemsFromConjugation() {
+		clearTimeout(stemTimeout);
+		stemTimeout = setTimeout(getStemsFromConjugation, options.delay);
+	}
+	function getStemsFromConjugation() {
+		var conjugation = currrentConjElem.text();
+		if( conjugation !== undefined ) {
+			bubbleContents.fadeOut("fast").empty();
+			var json = stemCache.load( conjugation );
+			if( json && json.length ) {
+				renderDataToBubble( json );
+				placeBubbleAtCurrent();
+			} else {
+				//bubbleContents.empty();
+				//bubbleContents.append( ajaxSpinner );
+				$.getJSON(
+						options.skeytlaStemUrl, 
+						{ b: conjugation, timestamp: +new Date() }, 
+						function(json){
+							stemCache.add( conjugation, json );
+							renderDataToBubble( json );
+							placeBubbleAtCurrent();
+						}
+				);
+			}
+		}
+	}
+	
+	function renderDataToBubble( json ) {
+		bubbleContents.append( "<ul>" );
+		$.each( json, function(i, item) {
+			bubbleContents.append( 
+				"<li><strong><a href='" + options.skeytlaBinIdUrlPrefix + item.id +"' target='_blank'>"
+				+ item.uppflettiord +"</a></strong> - " 
+				+ getOrdflokkurExpanded(item.ordflokkur) + "</li>" );
+		});
+		bubbleContents.append( "</ul>" );
+		bubbleContents.fadeIn("fast");
+	}
+	
+	function getOrdflokkurExpanded( ordflokkur ) {
+		switch( ordflokkur ) {
+		case "kvk":
+			return "Kvenkynsnafnorð";
+		case "kk":
+			return "Karlkynsnafnorð";
+		case "hk":
+			return "Hvorugkynsnafnorð";
+		case "so":
+			return "Sagnorð";
+		case "lo":
+			return "Lýsingarorð";
+		case "ao":
+			return "Atviksorð";
+		case "fn":
+			return "Fornafn";
+		default:
+			return ordflokkur;
+		}
+	}
+	
+	function placeBubbleAtCurrent() {
+		//console.log( bubble.height() );
+		bubble.animate({
+			left:currrentConjElem.offset().left + currrentConjElem.width() + 35,
+			top:currrentConjElem.offset().top - 11
+		}, "linear", function() {
+			if( !visible ) {
+				bubble.fadeIn("fast");
+				visible = true;
+			}
+		});
+	}
+	
+	function hideStemsFromConjugation() {
+		bubble.hide();
+		bubble.css('display', 'none');
+		visible = false;
+	}
+	
+	return {
+		showStems: function( current ) {
+			currrentConjElem = $( current );
+			showStemsFromConjugation();
+		},
+		hideStems: function() {
+			hideStemsFromConjugation();
+		}
+	};
+	
 };
 
 $.fn.selection = function(start, end) {

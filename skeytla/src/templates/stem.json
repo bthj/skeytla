@@ -1,0 +1,12 @@
+{% set stemCount = len(stems) %}
+{% set iterationCount = 0 %}
+[
+{% for stem in stems %}
+	{% set iterationCount += 1 %}
+	{
+		"id":"{{stem.id}}", 
+		"uppflettiord":{{json_encode(stem.uppflettiord)}}, 
+		"ordflokkur":{{json_encode(stem.ordflokkur)}}
+	}{% if iterationCount < stemCount %},{% end %}
+{% end %}
+]
