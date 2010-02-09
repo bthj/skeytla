@@ -1,5 +1,75 @@
 @CHARSET "UTF-8";
 
+body {
+	font-family: Helvetica, Arial, sans-serif;
+}
+
+.w {
+	background: lightgray none repeat scroll 0 0;
+	clear: both;
+	float: left;
+	padding: 5px 5px 0;
+}
+textarea.skeytla-input {
+	border: 1px solid #A5C2C8;
+	padding: 5px 26px 5px 5px;
+	margin: 0 0 5px;
+	width: 256px;
+	height: 150px;
+	font-family: Helvetica, Arial, sans-serif;
+	font-size: 14px;
+	line-height: 1.4em;
+	font-size-adjust: none;
+	font-stretch: normal;
+	font-style: normal;
+	font-variant: normal;
+	font-weight: bold;
+}
+
+div#skeytla-container {
+	float: left;
+}
+
+div#front-page-intro {
+	float: left;
+	margin-left:20px;
+}
+
+div#front-page-intro h1 {
+	margin: 0 0 5px;	
+}
+
+div#front-page-intro p, div#front-page-intro ul {
+	line-height: 1.8em;
+	color: #777777;
+}
+
+div#front-page-intro strong {
+	/*color: black;*/
+	/*font-weight: normal;*/
+}
+
+.footer {
+	position: relative;
+	clear: both;
+	padding: 1px;
+	color: #777777;
+}
+.footer .footer-content {
+	margin-top: 200px;
+	padding: 5px;
+	border-top: 1px solid #777777;
+}
+.footer a {
+	color: #777777;	
+}
+.footer p {
+	float: left;
+}
+.footer address  {
+	float:right;
+}
+
 /* Bubble pop-up */
 
 .popup {

@@ -215,6 +215,8 @@ $.Autocompleter = function(input, options) {
 		if( options.skeytla ) {
 			var currentText = $input.val();
 			if( skeytlaMatchAtCursor ) {
+				var scrollTop = $input.scrollTop();
+				var scrollLeft = $input.scrollLeft();
 				var beforeMatch = currentText.substring( 0, skeytlaMatchAtCursor.startIndex );
 				var afterMatch = currentText.substring( skeytlaMatchAtCursor.endIndex );
 				var caretPosition = beforeMatch.length + v.length;  // set cursor at the end of newly inserted word
@@ -248,6 +250,8 @@ $.Autocompleter = function(input, options) {
 		$input.val(v);
 		if( caretPosition ) {
 			$(input).caret(caretPosition, caretPosition);   //jCaret plugin: http://cloudgen.w0ng.hk/jquery/caret.php
+			$input.scrollTop( scrollTop );
+			$input.scrollLeft( scrollLeft );
 		}
 		hideResultsNow();
 		$input.trigger("result", [selected.data, selected.value]);
@@ -333,6 +337,14 @@ $.Autocompleter = function(input, options) {
 	function getSkeytlaMatchAtCursor( text, word ) {
 		var skeytlaMatch = null;		
 		var cursorAt = $(input).selection().start;
+		//var cursorAt = $(input).caret().end;
+		if( $.browser.msie ) {
+			cursorAt = adjustCaretPositionForMsie( cursorAt );
+			//the $(input).selection().start call above moves the cursor in a 
+			//non-ie-multiline-friendly way, so here a quick hack that may be done more robustly; 
+			//this seems OK for a few lines but fails with longer texts in everyone's favorite browser
+			$(input).selection(cursorAt, cursorAt); 
+		}
 		var startIndex = -1;
 		do {
 			startIndex = text.indexOf( word, startIndex + 1 );
@@ -342,6 +354,13 @@ $.Autocompleter = function(input, options) {
 			}
 		} while( skeytlaMatch === null && startIndex > -1 );
 		return skeytlaMatch;
+	}
+	
+	function adjustCaretPositionForMsie( caretPos ) { // as seen in a comment at http://weblogs.asp.net/skillet/archive/2005/03/24/395838.aspx#523214
+		var lineBreakCount = 0;
+		var lineBreaks = $(input).val().match(/\n/g);
+		if( lineBreaks != null ) lineBreakCount = lineBreaks.length;
+		return caretPos - lineBreakCount;
 	}
 	
 	function getSkeytlaSearchValuesFromMatch( word, boundaries ) {
@@ -543,6 +562,7 @@ $.Autocompleter.defaults = {
 	skeytla: false,
 	skeytlaBubbleId: "#bubble",
 	skeytlaBubbleContentsId: "#popup-contents",
+	skeytlaBubbleMinHeight: 42,
 	skeytlaStemUrl: "/stem",
 	skeytlaBinIdUrlPrefix: "http://bin.arnastofnun.is/leit.php?id=",
 	skeytlaAjaxSpinnerPath: "/static/img/ajax-loader.gif",
@@ -996,10 +1016,10 @@ $.Autocompleter.StemInfoBubble = function( options, mySelect ) {
 	}
 	
 	function placeBubbleAtCurrent() {
-		//console.log( bubble.height() );
+		var extraHeightDelta = (bubble.height()/2) - 10;
 		bubble.animate({
 			left:currrentConjElem.offset().left + currrentConjElem.width() + 35,
-			top:currrentConjElem.offset().top - 11
+			top:currrentConjElem.offset().top - extraHeightDelta 
 		}, "linear", function() {
 			if( !visible ) {
 				bubble.fadeIn("fast");
@@ -1009,9 +1029,11 @@ $.Autocompleter.StemInfoBubble = function( options, mySelect ) {
 	}
 	
 	function hideStemsFromConjugation() {
+		clearTimeout(stemTimeout);
 		bubble.hide();
 		bubble.css('display', 'none');
 		visible = false;
+		clearTimeout(stemTimeout); // double tap!
 	}
 	
 	return {
@@ -1023,7 +1045,6 @@ $.Autocompleter.StemInfoBubble = function( options, mySelect ) {
 			hideStemsFromConjugation();
 		}
 	};
-	
 };
 
 $.fn.selection = function(start, end) {

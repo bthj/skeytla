@@ -29,7 +29,7 @@
 				this[0].selectionEnd=end;
 			}
 			this[0].focus();
-			return this
+			return this;
 		} else {
 			if($.browser.msie){
 				var val = this.val();

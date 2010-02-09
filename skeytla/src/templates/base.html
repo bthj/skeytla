@@ -15,7 +15,12 @@
     {% block head %}{% end %}
   </head>
   <body>
-    <h1>{{ escape(handler.settings["title"]) }}</h1>
     {% block body %}{% end %}
+    <div class="footer">
+      <div class="footer-content">
+        <p>Byggt á gögnum frá <a href="http://ordid.is/">Orðinu</a></p>
+        <address>bangsi@bthj.is</address>
+      </div>
+    </div>
   </body>
 </html>

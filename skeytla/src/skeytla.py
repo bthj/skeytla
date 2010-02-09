@@ -52,16 +52,19 @@ class RimHandler(BaseHandler):
         if limit is None:
             limit = self.max_result_rows
         if upphaf is None and endir is not None:
-            rimord = self.db.query("select * from ordmyndir "
-                                   "where ordmynd like %s limit %s", 
-                                   ('%%%s' % endir), int(limit))
+            rimord = self.db.query("select * from ordmyndir_and_reversed "
+                                   "where ordmynd_reversed like %s "
+                                   "order by ordmynd asc limit %s", 
+                                   ('%s%%' % endir[::-1]), int(limit))
         elif upphaf is not None and endir is not None:
-            rimord = self.db.query("select * from ordmyndir "
-                                   "where ordmynd like %s and ordmynd like %s limit %s",
-                                   ('%s%%' % upphaf), ('%%%s' % endir), int(limit))
+            rimord = self.db.query("select * from ordmyndir_and_reversed "
+                                   "where ordmynd like %s and ordmynd_reversed like %s "
+                                   "order by ordmynd asc limit %s",
+                                   ('%s%%' % upphaf), ('%s%%' % endir[::-1]), int(limit))
         elif upphaf is not None and endir is None:
-            rimord = self.db.query("select * from ordmyndir "
-                                   "where ordmynd like %s limit %s",
+            rimord = self.db.query("select * from ordmyndir_and_reversed "
+                                   "where ordmynd like %s "
+                                   "order by ordmynd asc limit %s",
                                     ('%s%%' % upphaf), int(limit))
         self.render("rim.json", rimord=rimord)
 

@@ -1,0 +1,1 @@
+*.xcf are GIMIP work files - http://www.gimp.org/
