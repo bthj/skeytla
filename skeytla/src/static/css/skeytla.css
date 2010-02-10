@@ -44,6 +44,10 @@ div#front-page-intro p, div#front-page-intro ul {
 	color: #777777;
 }
 
+a {
+	color: #777777;
+}
+
 div#front-page-intro strong {
 	/*color: black;*/
 	/*font-weight: normal;*/
@@ -105,3 +109,7 @@ div#front-page-intro strong {
 .popup td#bottomleft { background-image: url(/static/img/stem_bubble_6.png); }
 .popup td.bottom { background-image: url(/static/img/stem_bubble_7.png); }
 .popup td#bottomright { background-image: url(/static/img/stem_bubble_8.png); }
+
+.hide {
+	display: none;
+}

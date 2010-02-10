@@ -16,8 +16,31 @@
       multipleSeparator: / |\n/,
       max: 100
     }).focus();
+
     
+    $("a[rel^='prettyPhoto']").prettyPhoto({ default_width: Math.ceil($(window).width()/1.4), theme: 'facebook' });
+
+    $("#skeytla-video-1-link").click( function() {
+        var videoTag = document.getElementById("skeytla-video-1-tag");
+        var videoObject = document.getElementById("skeytla-video-1-vobject");
+        var videoEmbed = document.getElementById("skeytla-video-1-vembed");
+        var ratio = videoTag.height / videoTag.width;
+        var videoWidth = Math.ceil($(window).width()/1.6); // jQuery's attr() function ain't working here
+        var videoHeight = Math.ceil(videoWidth * ratio);
+        if( videoHeight > $(window).height() ) {
+        	videoHeight = Math.ceil( $(window).height()/1.6 );
+        	videoWidth = Math.ceil( videoHeight / ratio );
+        }
+        videoTag.width = videoWidth;
+        videoTag.height = videoHeight;
+        videoObject.width = videoWidth;
+        videoObject.height = videoHeight;
+        videoEmbed.width = videoWidth;
+        videoEmbed.height = videoHeight;
+    });
+
   });
+
   </script>
 
 {% end %}
@@ -32,13 +55,18 @@
   </div>
   <div id="front-page-intro">
     <h1><span style="color: #717400;">Skeytl</span><span style="color: #BE2805;">@</span></h1>
-    <p>Skeytavélin finnur <strong>@forskeyti</strong> eða <strong>viðskeyti@</strong> ef ritað er
+    <p>Skeytavélin finnur <strong>@forskeyti</strong> eða <strong>viðskeyti@</strong> ef ritað er</p>
       <ul>
         <li>@<strong>upphaf</strong></li>
         <li><strong>endir</strong>@</li>
         <li>eða bæði @<strong>upphaf</strong>@<strong>endir</strong>@
       </ul>
-    </p>
+      <p>Sjá <a id="skeytla-video-1-link" href="#skeytla-video-1" rel="prettyPhoto">notkun skeytlunnar í skjávarpi</a></p>
+      <div id="skeytla-video-1" class="hide">
+        <video id="skeytla-video-1-tag" src="http://mappa.bthj.is/albums/hreyfimyndir/skeytla/skeytluskjavarp.ogv" width="768" height="592" controls>
+            <object id="skeytla-video-1-vobject" width="768" height="592"><param name="allowfullscreen" value="true" /><param name="allowscriptaccess" value="always" /><param name="movie" value="http://vimeo.com/moogaloop.swf?clip_id=9339671&amp;server=vimeo.com&amp;show_title=1&amp;show_byline=1&amp;show_portrait=0&amp;color=&amp;fullscreen=1" /><embed id="skeytla-video-1-vembed" src="http://vimeo.com/moogaloop.swf?clip_id=9339671&amp;server=vimeo.com&amp;show_title=1&amp;show_byline=1&amp;show_portrait=0&amp;color=&amp;fullscreen=1" type="application/x-shockwave-flash" allowfullscreen="true" allowscriptaccess="always" width="768" height="592"></embed></object><p><a href="http://vimeo.com/9339671">Skeytla á Vimeo</a></p>
+        </video>
+      </div>
   </div>
   
   <table id="bubble" class="popup">
@@ -64,6 +92,5 @@
         </tr>
      </tbody>
    </table>
-  
   
 {% end %}
