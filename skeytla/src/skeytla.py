@@ -9,12 +9,13 @@ import tornado.web
 import os.path
 
 from tornado.options import define, options
+from tornado.database import OperationalError
 
 define("port", default=8888, help="run on the given port", type=int)
-define("mysql_host", default="127.0.0.1:3306", help="blog database host")
-define("mysql_database", default="skeytla", help="blog database name")
-define("mysql_user", default="skeytla", help="blog database user")
-define("mysql_password", default="", help="blog database password")
+define("mysql_host", default="127.0.0.1:3306", help="skeytla database host")
+define("mysql_database", default="skeytla", help="skeytla database name")
+define("mysql_user", default="skeytla", help="skeytla database user")
+define("mysql_password", default="", help="skeytla database password")
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -52,21 +53,31 @@ class RimHandler(BaseHandler):
         if limit is None:
             limit = self.max_result_rows
         if upphaf is None and endir is not None:
-            rimord = self.db.query("select * from ordmyndir_and_reversed "
+            rimord = self.query("select * from ordmyndir_and_reversed "
                                    "where ordmynd_reversed like %s "
                                    "order by ordmynd asc limit %s", 
                                    ('%s%%' % endir[::-1]), int(limit))
         elif upphaf is not None and endir is not None:
-            rimord = self.db.query("select * from ordmyndir_and_reversed "
+            rimord = self.query("select * from ordmyndir_and_reversed "
                                    "where ordmynd like %s and ordmynd_reversed like %s "
                                    "order by ordmynd asc limit %s",
                                    ('%s%%' % upphaf), ('%s%%' % endir[::-1]), int(limit))
         elif upphaf is not None and endir is None:
-            rimord = self.db.query("select * from ordmyndir_and_reversed "
+            rimord = self.query("select * from ordmyndir_and_reversed "
                                    "where ordmynd like %s "
                                    "order by ordmynd asc limit %s",
                                     ('%s%%' % upphaf), int(limit))
         self.render("rim.json", rimord=rimord)
+        
+    def query(self, query, *parameters):
+        try:
+            return self.db.query(query, *parameters)
+        except OperationalError:
+            try:
+                return self.db.query(query, *parameters)
+            except OperationalError:
+                raise
+            
 
 class StemHandler(BaseHandler):
     def get(self):
